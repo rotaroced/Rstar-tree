@@ -2,7 +2,7 @@ use crate::rect::*;
 use crate::rtree::RTree;
 use svg::Document;
 use svg::node::element::{Circle, Rectangle};
-const COLORS: [&str; 7] = [
+const COLORS: [&str; 8] = [
     "red",
     "orange",
     "goldenrod",
@@ -14,7 +14,7 @@ const COLORS: [&str; 7] = [
     // "darkslateblue",
     "magenta",
     // "mediumorchid",
-    // "maroon",
+    "maroon",
     // "grey",
     "black",
 ];
