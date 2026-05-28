@@ -5,10 +5,10 @@ use svg::node::element::{Circle, Rectangle};
 const COLORS: [&str; 8] = [
     "red",
     "orange",
-    "goldenrod",
+    // "goldenrod",
     "darkgreen",
     // "green",
-    // "cyan",
+    "cyan",
     // "lightskyblue",
     "blue",
     // "darkslateblue",
@@ -19,7 +19,7 @@ const COLORS: [&str; 8] = [
     "black",
 ];
 
-fn rect_to_svg(t: &Rect, depth: usize) -> Rectangle {
+fn rect_to_svg(t: &Rect<2>, depth: usize) -> Rectangle {
     Rectangle::new()
         .set("x", t.0[0].0.into_inner() - 0.1 * depth as f64)
         .set("y", t.0[1].0.into_inner() - 0.1 * depth as f64)
@@ -47,7 +47,7 @@ pub fn point_to_svg(p: &[f64]) -> Circle {
 }
 
 fn rects_to_svg<T: Clone + std::fmt::Debug, const M: usize>(
-    t: &RTree<T, M>,
+    t: &RTree<T, M, 2>,
     depth: usize,
     mut d: Document,
 ) -> Document {
@@ -55,7 +55,7 @@ fn rects_to_svg<T: Clone + std::fmt::Debug, const M: usize>(
         RTree::Leaf(_, _) => d,
         RTree::InternalNode(r, v) => {
             d = d.clone().add(rect_to_svg(r, depth));
-            for a in v {
+            for a in v.iter().flatten() {
                 d = rects_to_svg(a, depth + 1, d);
             }
             d
@@ -65,20 +65,21 @@ fn rects_to_svg<T: Clone + std::fmt::Debug, const M: usize>(
 }
 
 fn add_points<T: Clone + std::fmt::Debug, const M: usize>(
-    t: &RTree<T, M>,
+    t: &RTree<T, M, 2>,
     d: Document,
 ) -> Document {
     match t {
         RTree::Leaf(p, _) => d.add(point_to_svg(p)),
-        RTree::InternalNode(_, v) => v.iter().fold(d, |d, a| add_points(a, d)),
-        RTree::LeafNode(_, v) => v.iter().fold(d, |d, a| add_points(a, d)),
+        RTree::InternalNode(_, v) => v
+            .iter()
+            .fold(d, |d, a| if let Some(t) = a { add_points(t, d) } else { d }),
+        RTree::LeafNode(_, v) => v.iter().flatten().fold(d, |d, a| add_points(a, d)),
     }
 }
 
 pub fn bidimensional_rtree_to_svg<T: Clone + std::fmt::Debug, const M: usize>(
-    t: RTree<T, M>,
+    t: RTree<T, M, 2>,
 ) -> Document {
-    assert_eq!(t.get_rect().dim(), 2);
     add_points(
         &t,
         rects_to_svg(

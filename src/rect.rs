@@ -1,37 +1,28 @@
 use core::cmp::{max, min};
-use core::ops::Mul;
+use num_traits::Zero;
 use num_traits::real::Real;
 pub use ordered_float::NotNan;
-use std::ops::{Add, Not};
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
-pub struct Rect(pub Vec<(NotNan<f64>, NotNan<f64>)>);
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+pub struct Rect<const DIM: usize>(pub [(NotNan<f64>, NotNan<f64>); DIM]);
 
-impl Rect {
-    pub fn empty_rect(dim: usize) -> Self {
-        Self(
-            (0..dim)
-                .map(|_| (NotNan::default(), NotNan::default()))
-                .collect(),
-        )
-    }
+impl<const DIM: usize> Rect<DIM> {
     #[inline]
-    pub fn dim(&self) -> usize {
-        self.0.len()
+    // creates a non empty Rect containing only the point [0, ..., 0]
+    pub fn empty_rect() -> Self {
+        Self([(NotNan::zero(), NotNan::zero()); DIM])
     }
 
-    pub fn merge(r1: &Rect, r2: &Rect) -> Rect {
-        debug_assert!(r1.eq_dim(r2));
-        let mut r = Self::empty_rect(r1.dim());
-        for i in 0..r1.dim() {
+    pub fn merge(r1: &Rect<DIM>, r2: &Rect<DIM>) -> Rect<DIM> {
+        let mut r = Self::empty_rect();
+        for i in 0..DIM {
             r.0[i] = (min(r1.0[i].0, r2.0[i].0), max(r1.0[i].1, r2.0[i].1));
         }
         r
     }
 
-    pub fn from_point(p: &[f64]) -> Self {
-        let mut r = Self::empty_rect(p.len());
-        // println!("{p:?}");
+    pub fn from_point(p: &[f64; DIM]) -> Self {
+        let mut r = Self::empty_rect();
         for (i, &x) in p.iter().enumerate() {
             let x = x.try_into().unwrap();
             r.0[i] = (x, x)
@@ -39,8 +30,7 @@ impl Rect {
         r
     }
 
-    pub fn contains(&self, p: &[f64]) -> bool {
-        debug_assert_eq!(self.dim(), p.len());
+    pub fn contains(&self, p: &[f64; DIM]) -> bool {
         self.0
             .iter()
             .zip(p)
@@ -57,8 +47,7 @@ impl Rect {
     /// Returns the intersection of two rectangles.
     /// if the intersection is empty, returns rectangle of volume 0 (which therefore isn't the
     /// actual intersection of the rectangles).
-    pub fn inter(&self, r: &Rect) -> Rect {
-        debug_assert!(self.eq_dim(r));
+    pub fn inter(&self, r: &Rect<DIM>) -> Rect<DIM> {
         Rect(
             self.0
                 .iter()
@@ -78,17 +67,12 @@ impl Rect {
             .fold(NotNan::try_from(0.).unwrap(), |x, y| x + y)
     }
 
-    pub fn dist_from_point(&self, p: &[f64]) -> f64 {
-        debug_assert_eq!(self.dim(), p.len());
+    pub fn dist_from_point(&self, p: &[f64; DIM]) -> f64 {
         self.0
             .iter()
-            .zip(p.into_iter())
+            .zip(p.iter())
             .map(segment_dist_from_point)
             .fold(0., |a, x| a + x * x)
-    }
-
-    fn eq_dim(&self, other: &Self) -> bool {
-        self.0.len() == other.0.len()
     }
 }
 
@@ -115,7 +99,7 @@ fn segment_dist_from_point((s, x): (&(NotNan<f64>, NotNan<f64>), &f64)) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use num_traits::{Float, FromPrimitive};
+    use num_traits::FromPrimitive;
     use ordered_float::NotNan;
 
     use crate::rect::Rect;
@@ -124,7 +108,7 @@ mod tests {
     fn dist_from_point() {
         let p = [5., 3.];
 
-        let r1 = Rect(vec![
+        let r1 = Rect([
             (NotNan::from_f64(0.).unwrap(), NotNan::from_f64(3.).unwrap()),
             (NotNan::from_f64(1.).unwrap(), NotNan::from_f64(2.).unwrap()),
         ]);
