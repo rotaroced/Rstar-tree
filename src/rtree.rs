@@ -205,7 +205,6 @@ impl<T: fmt::Debug + Clone, const M: usize, const DIM: usize> RTree<T, M, DIM> {
                             Rect::merge(&r, &Rect::from_point(p)).volume().into_inner()
                                 - r.volume().into_inner();
                         // resolves ties using volume
-                        // println!("{child:?}, {enlargement} {:?}\n", r.volume());
                         if (enlargement, r.volume().into_inner())
                             <= (min_enlargement, min_rect_volume)
                         {
